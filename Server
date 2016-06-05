@@ -1,22 +1,37 @@
 import java.net.*;
 import java.io.*;
+import java.awt.Color;
+import java.awt.Menu;
+import java.awt.MenuBar;
+import java.awt.MenuItem;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.image.*;
 
 import javax.imageio.*; 
 import javax.swing.*; 
 
-public class Server extends JFrame {
+public class Server implements ActionListener{
 	Socket socket;
 	ServerSocket server=null;
+	private JMenuBar menuBar = new JMenuBar();
+	private JMenu file = new JMenu("Editar");
+	private JMenuItem cinza = new JMenuItem("Escala de cinzas");
+
+	 BufferedImage img ;
+	
+	 BufferedImage img2;
+	 JFrame f = new JFrame("Editor"); 
+     JLabel l = new JLabel();
 	public Server(){
 		
-	      super();
-	      BufferedImage img = null;
+	     
 	      try {
 			server = new ServerSocket(80);
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
+			
 		}
 	 	 
 	      System.out.println("Server Waiting for image");
@@ -37,7 +52,7 @@ public class Server extends JFrame {
 			e1.printStackTrace();
 		}
 	    
-	      JFrame f = new JFrame("Server");   
+	       
 	      JFileChooser fileChooser = new JFileChooser();
 	      fileChooser.setCurrentDirectory(new File(System.getProperty("user.home")));
 	      int result = fileChooser.showOpenDialog(f);
@@ -45,20 +60,23 @@ public class Server extends JFrame {
 	          File selectedFile = fileChooser.getSelectedFile();
 	          System.out.println("Selected file: " + selectedFile.getAbsolutePath());
 	          try {
-				img = ImageIO.read(selectedFile);
+				img = ImageIO.read(selectedFile);img2 = img;
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}   
 	      }
 
-	      JLabel l = new JLabel();
-	      
-	      ImageIcon icon = new ImageIcon(img);
-	      l.setIcon(icon);
+	      l.setIcon(new ImageIcon(img));
 	      f.add(l);
-
+	      f.setJMenuBar(menuBar);
+	      menuBar.add(file);
 	     
+	     
+	      cinza.addActionListener(this);
+	      file.add(cinza);
+
+	      
 	      f.addWindowListener(new java.awt.event.WindowAdapter() {
 	    	    @Override
 	    	    public void windowClosing(java.awt.event.WindowEvent windowEvent) {
@@ -74,19 +92,55 @@ public class Server extends JFrame {
 					}
 	    	    }
 	    	});
+	     
+	     	
 	      f.pack();
-	      f.setVisible(true);	
+	      f.setVisible(true);
 		
-		
+	    
+	
+	
 	}
 
-      
+	  public void actionPerformed(ActionEvent e) {
+    	  if (e.getSource() == cinza){
+    		
+    		  try {
+    		  int width;
+    		   int height;
+    	         width = img2.getWidth();
+    	         height = img2.getHeight();
+    	     System.out.println("Image size: "+width+" x "+height);    
+    	         for(int i=0; i<height; i++){
+    	         
+    	            for(int j=0; j<width; j++){
+    	            
+    	               Color c = new Color(img2.getRGB(j, i));
+    	               int red = (int)(c.getRed() * 0.299);
+    	               int green = (int)(c.getGreen() * 0.587);
+    	               int blue = (int)(c.getBlue() *0.114);
+    	               Color newColor = new Color(red+green+blue,
+    	               
+    	               red+green+blue,red+green+blue);
+    	               
+    	               img2.setRGB(j,i,newColor.getRGB());
+    	              
+    	            }
+    	         }
+    	   
+    	         l = new JLabel();
+    	        l.setIcon(new ImageIcon(img2));
+    		      f.add(l);
+    	         
+    	      } catch (Exception e2) {}}
+    	  
+    	
+    	  
+      }
    
    
    public static void main(String args[]) {
-	    
-		Server app = new Server();
-
+	 new Server();
 
 	}
 }
