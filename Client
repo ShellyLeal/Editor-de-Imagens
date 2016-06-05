@@ -1,0 +1,22 @@
+import java.net.*; 
+import java.io.*;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import javax.imageio.ImageIO;
+import javax.swing.JFileChooser;
+
+public class Client{
+   public static void main(String args[]) throws Exception{
+   
+      Socket soc;
+      BufferedImage img = null;
+      soc=new Socket("localhost",80);
+      System.out.println("Client is running. ");
+  
+       	      
+         System.out.println("Reading image from disk. ");
+  
+      soc.close();
+   }
+}
