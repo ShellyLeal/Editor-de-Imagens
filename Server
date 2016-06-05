@@ -1,0 +1,92 @@
+import java.net.*;
+import java.io.*;
+import java.awt.image.*;
+
+import javax.imageio.*; 
+import javax.swing.*; 
+
+public class Server extends JFrame {
+	Socket socket;
+	ServerSocket server=null;
+	public Server(){
+		
+	      super();
+	      BufferedImage img = null;
+	      try {
+			server = new ServerSocket(80);
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+	 	 
+	      System.out.println("Server Waiting for image");
+
+	      try {
+			socket = server.accept();
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+	      System.out.println("Client connected.");
+	      
+	      InputStream in;
+		try {
+			in = socket.getInputStream();
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+	    
+	      JFrame f = new JFrame("Server");   
+	      JFileChooser fileChooser = new JFileChooser();
+	      fileChooser.setCurrentDirectory(new File(System.getProperty("user.home")));
+	      int result = fileChooser.showOpenDialog(f);
+	      if (result == JFileChooser.APPROVE_OPTION) {
+	          File selectedFile = fileChooser.getSelectedFile();
+	          System.out.println("Selected file: " + selectedFile.getAbsolutePath());
+	          try {
+				img = ImageIO.read(selectedFile);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}   
+	      }
+
+	      JLabel l = new JLabel();
+	      
+	      ImageIcon icon = new ImageIcon(img);
+	      l.setIcon(icon);
+	      f.add(l);
+
+	     
+	      f.addWindowListener(new java.awt.event.WindowAdapter() {
+	    	    @Override
+	    	    public void windowClosing(java.awt.event.WindowEvent windowEvent) {
+	    	        if (JOptionPane.showConfirmDialog(f,"Are you sure to close this window?", "Really Closing?", JOptionPane.YES_NO_OPTION,
+	 JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION){
+	    	            System.exit(0);
+	    	        }
+	    	        try {
+						server.close();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+	    	    }
+	    	});
+	      f.pack();
+	      f.setVisible(true);	
+		
+		
+	}
+
+      
+   
+   
+   public static void main(String args[]) {
+	    
+		Server app = new Server();
+
+
+	}
+}
