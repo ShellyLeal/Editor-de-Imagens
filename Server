@@ -1,28 +1,47 @@
 import java.net.*;
+import java.util.Arrays;
+import java.util.Random;
 import java.io.*;
+import java.awt.AlphaComposite;
+import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Container;
+import java.awt.Graphics2D;
 import java.awt.Menu;
 import java.awt.MenuBar;
 import java.awt.MenuItem;
+import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.image.*;
 
 import javax.imageio.*; 
-import javax.swing.*; 
+import javax.swing.*;
+import javax.swing.filechooser.FileNameExtensionFilter; 
 
 public class Server implements ActionListener{
 	Socket socket;
 	ServerSocket server=null;
 	private JMenuBar menuBar = new JMenuBar();
 	private JMenu file = new JMenu("Editar");
+	private JMenu file2 = new JMenu("Filtros");
+
 	private JMenuItem cinza = new JMenuItem("Escala de cinzas");
+    private JMenuItem refletir = new JMenuItem("Refletir");
+    private JMenuItem rotacionar = new JMenuItem("Rotacionar");
+    private JMenuItem girar = new JMenuItem("Girar");
+    private JMenuItem comparar = new JMenuItem("Comparar");
+	private JMenuItem mascara = new JMenuItem("Máscara");
+	private JMenuItem inverter = new JMenuItem("Negativo");
+	private JMenuItem threshold = new JMenuItem("Threshold");
 
 	 BufferedImage img ;
-	
-	 BufferedImage img2;
+	private String a;
+	 BufferedImage aimg;
 	 JFrame f = new JFrame("Editor"); 
      JLabel l = new JLabel();
+     int w;
+	   int h;
 	public Server(){
 		
 	     
@@ -52,31 +71,56 @@ public class Server implements ActionListener{
 			e1.printStackTrace();
 		}
 	    
-	       
+		String extension = "";
 	      JFileChooser fileChooser = new JFileChooser();
 	      fileChooser.setCurrentDirectory(new File(System.getProperty("user.home")));
+	      FileNameExtensionFilter filter = new FileNameExtensionFilter("Imagens","jpg","bmp","jpeg","gif");	      
+	      fileChooser.setFileFilter(filter);
 	      int result = fileChooser.showOpenDialog(f);
 	      if (result == JFileChooser.APPROVE_OPTION) {
 	          File selectedFile = fileChooser.getSelectedFile();
-	          System.out.println("Selected file: " + selectedFile.getAbsolutePath());
+	          a = selectedFile.getAbsolutePath();
+	          System.out.println("Selected file: " + a);
 	          try {
-				img = ImageIO.read(selectedFile);img2 = img;
+				img = ImageIO.read(selectedFile);aimg = img;
+				
+
+				int i = a.lastIndexOf('.');
+				if (i > 0) {
+				    extension = a.substring(i+1);
+				    System.out.println(extension);
+				}
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}   
 	      }
-
+	   
+	      l.setSize(w, h); 
 	      l.setIcon(new ImageIcon(img));
 	      f.add(l);
 	      f.setJMenuBar(menuBar);
 	      menuBar.add(file);
-	     
+	      menuBar.add(file2);
+
 	     
 	      cinza.addActionListener(this);
 	      file.add(cinza);
-
-	      
+          refletir.addActionListener(this);
+          file.add(refletir);
+          
+         rotacionar.addActionListener(this);
+          file.add(rotacionar);
+          girar.addActionListener(this);
+          file.add(girar);
+          comparar.addActionListener(this);
+          file.add(comparar);
+          mascara.addActionListener(this);
+          file2.add(mascara);
+          inverter.addActionListener(this);
+          file2.add(inverter);
+          threshold.addActionListener(this);
+          file2.add(threshold);
 	      f.addWindowListener(new java.awt.event.WindowAdapter() {
 	    	    @Override
 	    	    public void windowClosing(java.awt.event.WindowEvent windowEvent) {
@@ -103,19 +147,122 @@ public class Server implements ActionListener{
 	}
 
 	  public void actionPerformed(ActionEvent e) {
+		  if (e.getSource() == inverter) { 
+			  w = aimg.getWidth();
+	 	         h = aimg.getHeight();
+	    	        BufferedImage dimg = new BufferedImage(w, h, aimg.getType());  
+	    	       
+	    	        for (int i = 0; i < w; i++) {
+	    	            for (int j = 0; j < h; j++) {               
+	    	            	int rgb = aimg.getRGB(i, j);               //a cor inversa é dado por 255 menos o valor da cor  
+	    	            	int r = 255 - (int)((rgb&0x00FF0000)>>>16);
+	    	                int g = 255 - (int)((rgb&0x0000FF00)>>>8);
+	    	                int b = 255 - (int) (rgb&0x000000FF);
+	    	                Color color = new Color(r, g, b);
+	    	                dimg.setRGB(i, j, color.getRGB());
+	    	            }
+	    	        }
+	    	        Container parent = l.getParent();
+
+      	         parent.remove(l);
+      	         parent.validate();
+      	         parent.repaint();
+      	         l = new JLabel(); l.setSize(w, h);
+      	         aimg = dimg;
+      	         l.setIcon(new ImageIcon(aimg));
+      		     f.add(l);
+		  }
+		  
+		  if (e.getSource() == threshold) { 
+			  w = aimg.getWidth();
+	 	         h = aimg.getHeight();
+	    	        BufferedImage dimg = new BufferedImage(w, h, aimg.getType());  
+	    	       
+	    	        for (int i = 0; i < w; i++) {
+	    	            for (int j = 0; j < h; j++) {               
+	    	            	int rgb = aimg.getRGB(i, j);               
+	    	            	int r = (int)((rgb&0x00FF0000)>>>16);
+	    	                int g = (int)((rgb&0x0000FF00)>>>8);
+	    	                int b = (int) (rgb&0x000000FF);
+	    	                int media = (r + g + b) / 3;
+	    	                Color white = new Color(255, 255, 255);
+	    	                Color black = new Color(0, 0, 0);
+	    	                //como explicado no artigo, no threshold definimos um limiar,
+	    	                //que é um valor "divisor de águas"
+	    	                //pixels com valor ABAIXO do limiar viram pixels PRETOS,
+	    	                //pixels com valor ACIMA do limiar viram pixels BRANCOS
+	    	                if (media < 20)
+	    	                    dimg.setRGB(i, j, black.getRGB());
+	    	                else
+	    	                    dimg.setRGB(i, j, white.getRGB());
+	    	            }
+	    	        }
+	    	        Container parent = l.getParent();
+
+      	         parent.remove(l);
+      	         parent.validate();
+      	         parent.repaint();
+      	         l = new JLabel(); l.setSize(w, h);
+      	         aimg = dimg;
+      	         l.setIcon(new ImageIcon(aimg));
+      		     f.add(l);
+		  }
+		
+		
+		  if (e.getSource() == mascara) { 
+			  w = aimg.getWidth();
+	  	         h = aimg.getHeight();
+			  Color[] pixel=new Color[9];
+			  int[] R=new int[9];
+		        int[] B=new int[9];
+		int[] G=new int[9];
+        BufferedImage dimg = new BufferedImage(w, h, aimg.getType());  
+
+			  for(int i=1;i<dimg.getWidth()-1;i++)
+		            for(int j=1;j<dimg.getHeight()-1;j++)
+		            {
+		               pixel[0]=new Color(aimg.getRGB(i-1,j-1));
+		               pixel[1]=new Color(aimg.getRGB(i-1,j));
+		               pixel[2]=new Color(aimg.getRGB(i-1,j+1));
+		               pixel[3]=new Color(aimg.getRGB(i,j+1));
+		               pixel[4]=new Color(aimg.getRGB(i+1,j+1));
+		               pixel[5]=new Color(aimg.getRGB(i+1,j));
+		               pixel[6]=new Color(aimg.getRGB(i+1,j-1));
+		               pixel[7]=new Color(aimg.getRGB(i,j-1));
+		               pixel[8]=new Color(aimg.getRGB(i,j));
+		               for(int k=0;k<9;k++){
+		                   R[k]=pixel[k].getRed();
+		                   B[k]=pixel[k].getBlue();
+		                   G[k]=pixel[k].getGreen();
+		               }
+		               Arrays.sort(R);
+		               Arrays.sort(G);
+		               Arrays.sort(B);
+		               dimg.setRGB(i,j,new Color(R[4],B[4],G[4]).getRGB());
+		}
+			  aimg = dimg;
+	        Container parent = l.getParent();
+	         parent.remove(l);
+	         parent.validate();
+	         parent.repaint();
+	         l = new JLabel(); l.setSize(w, h);
+	        l.setIcon(new ImageIcon(aimg));
+		      f.add(l);
+	    }  
     	  if (e.getSource() == cinza){
-    		
+    		  w = aimg.getWidth();
+ 	         h = aimg.getHeight();
+    	        BufferedImage dimg = new BufferedImage(w, h, aimg.getType());  
+
     		  try {
-    		  int width;
-    		   int height;
-    	         width = img2.getWidth();
-    	         height = img2.getHeight();
-    	     System.out.println("Image size: "+width+" x "+height);    
-    	         for(int i=0; i<height; i++){
+    		  
     	         
-    	            for(int j=0; j<width; j++){
+    	     System.out.println("Image size: "+w+" x "+h);    
+    	         for(int i=0; i<h; i++){
+    	         
+    	            for(int j=0; j<w; j++){
     	            
-    	               Color c = new Color(img2.getRGB(j, i));
+    	               Color c = new Color(aimg.getRGB(j, i));
     	               int red = (int)(c.getRed() * 0.299);
     	               int green = (int)(c.getGreen() * 0.587);
     	               int blue = (int)(c.getBlue() *0.114);
@@ -123,24 +270,107 @@ public class Server implements ActionListener{
     	               
     	               red+green+blue,red+green+blue);
     	               
-    	               img2.setRGB(j,i,newColor.getRGB());
-    	              
+    	               dimg.setRGB(j,i,newColor.getRGB());
+    	               
     	            }
     	         }
+   			  aimg = dimg;
+
+    	         Container parent = l.getParent();
+    	         parent.remove(l);
+    	         parent.validate();
+    	         parent.repaint();
     	   
-    	         l = new JLabel();
-    	        l.setIcon(new ImageIcon(img2));
+    	         l = new JLabel(); l.setSize(w, h);
+    	        l.setIcon(new ImageIcon(aimg));
     		      f.add(l);
     	         
     	      } catch (Exception e2) {}}
+    	   if(e.getSource()== refletir) {  
+    		 w = aimg.getWidth();
+  	         h = aimg.getHeight();
+    		  
+    	        BufferedImage dimg = new BufferedImage(w, h, aimg.getType());  
+    	        Graphics2D g = dimg.createGraphics();  
+    	        g.drawImage(aimg, 0, 0, w, h, w, 0, 0, h, null);  
+    	        g.dispose();
+    	         Container parent = l.getParent();
+       	         parent.remove(l);
+       	         parent.validate();
+       	         parent.repaint();
+       	         l = new JLabel(); l.setSize(w, h);
+       	         aimg = dimg;
+       	         l.setIcon(new ImageIcon(aimg));
+       		     f.add(l);
+    	        
+            }  
     	  
-    	
-    	  
-      }
+    	   if(e.getSource()== rotacionar) { 
+    		     
+    	            int w = aimg.getWidth();  
+    	            int h = aimg.getHeight();  
+    	            BufferedImage dimg = new BufferedImage(w, h, aimg.getColorModel().getTransparency());  
+    	            Graphics2D g = dimg.createGraphics();  
+    	            g.drawImage(aimg, 0, 0, w, h, 0, h, w, 0, null);  
+    	            g.dispose();  
+    	            Container parent = l.getParent();
+          	         parent.remove(l);
+          	         parent.validate();
+          	         parent.repaint();
+          	         l = new JLabel(); l.setSize(w, h);
+          	         aimg = dimg;
+          	         l.setIcon(new ImageIcon(aimg));
+          		     f.add(l);
+    	            
+    	        }  
+    	   
+    	   
+    	   if(e.getSource()== girar) { 
+    	      
+                int w = img.getWidth();  
+                int h = img.getHeight();  
+                BufferedImage dimg = new BufferedImage(w, h, img.getType());  
+                Graphics2D g = dimg.createGraphics();  
+                g.rotate(Math.toRadians(45), w/2, h/2);  
+                g.drawImage(img, null, 0, 0);  
+                Container parent = l.getParent();
+     	         parent.remove(l);
+     	         parent.validate();
+     	         parent.repaint();
+     	         l = new JLabel(); l.setSize(w, h);
+     	         aimg = dimg;
+     	         l.setIcon(new ImageIcon(aimg));
+     		     f.add(l);
+	            
+                
+            } 
+    	   if(e.getSource()== comparar) { 
+    	   Timer timer = new Timer(2000, new ActionListener() {
+    		  boolean  chromeShown = true;
+               @Override
+               public void actionPerformed(ActionEvent e) {
+                   if(chromeShown) {
+                       l.setIcon(new ImageIcon(img));
+                       chromeShown = false;
+                   } else {
+                       l.setIcon(new ImageIcon(aimg));
+                       chromeShown = true;
+                   }
+               }
+           });
+           timer.start();
+    	   }
+    	   
+    	   }
+    		   
+    	   
+    	   
+    	   
+      
    
    
    public static void main(String args[]) {
 	 new Server();
-
+     
 	}
 }
