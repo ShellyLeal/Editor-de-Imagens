@@ -1,12 +1,17 @@
 import java.net.*;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Random;
 import java.io.*;
 import java.awt.AlphaComposite;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Container;
+import java.awt.Desktop;
+import java.awt.Dimension;
 import java.awt.Graphics2D;
+import java.awt.MediaTracker;
 import java.awt.Menu;
 import java.awt.MenuBar;
 import java.awt.MenuItem;
@@ -25,7 +30,10 @@ public class Server implements ActionListener{
 	private JMenuBar menuBar = new JMenuBar();
 	private JMenu file = new JMenu("Editar");
 	private JMenu file2 = new JMenu("Filtros");
-
+	private JMenu file3 = new JMenu("Arquivo");
+	private JMenuItem desfazer = new JMenuItem("Desfazer alterações");
+    private JMenuItem salvar = new JMenuItem("Salvar");
+    private JMenuItem abrir = new JMenuItem("Abrir");
 	private JMenuItem cinza = new JMenuItem("Escala de cinzas");
     private JMenuItem refletir = new JMenuItem("Refletir");
     private JMenuItem rotacionar = new JMenuItem("Rotacionar");
@@ -34,17 +42,18 @@ public class Server implements ActionListener{
 	private JMenuItem mascara = new JMenuItem("Máscara");
 	private JMenuItem inverter = new JMenuItem("Negativo");
 	private JMenuItem threshold = new JMenuItem("Threshold");
+	private JMenuItem net = new JMenuItem("Enviar para web");
 
+	String name;
 	 BufferedImage img ;
-	private String a;
+	String a;
 	 BufferedImage aimg;
 	 JFrame f = new JFrame("Editor"); 
      JLabel l = new JLabel();
      int w;
 	   int h;
 	public Server(){
-		
-	     
+	        
 	      try {
 			server = new ServerSocket(80);
 		} catch (IOException e1) {
@@ -80,6 +89,7 @@ public class Server implements ActionListener{
 	      if (result == JFileChooser.APPROVE_OPTION) {
 	          File selectedFile = fileChooser.getSelectedFile();
 	          a = selectedFile.getAbsolutePath();
+	          name = selectedFile.getName();
 	          System.out.println("Selected file: " + a);
 	          try {
 				img = ImageIO.read(selectedFile);aimg = img;
@@ -102,8 +112,11 @@ public class Server implements ActionListener{
 	      f.setJMenuBar(menuBar);
 	      menuBar.add(file);
 	      menuBar.add(file2);
-
-	     
+          menuBar.add(file3);
+         abrir.addActionListener(this);
+	      file3.add(abrir);
+	      net.addActionListener(this);
+	      file3.add(net);
 	      cinza.addActionListener(this);
 	      file.add(cinza);
           refletir.addActionListener(this);
@@ -115,16 +128,21 @@ public class Server implements ActionListener{
           file.add(girar);
           comparar.addActionListener(this);
           file.add(comparar);
+          salvar.addActionListener(this);
+          file3.add(salvar);
+          
           mascara.addActionListener(this);
           file2.add(mascara);
           inverter.addActionListener(this);
           file2.add(inverter);
           threshold.addActionListener(this);
           file2.add(threshold);
+          desfazer.addActionListener(this);
+          file3.add(desfazer);
 	      f.addWindowListener(new java.awt.event.WindowAdapter() {
 	    	    @Override
 	    	    public void windowClosing(java.awt.event.WindowEvent windowEvent) {
-	    	        if (JOptionPane.showConfirmDialog(f,"Are you sure to close this window?", "Really Closing?", JOptionPane.YES_NO_OPTION,
+	    	        if (JOptionPane.showConfirmDialog(f,"Fechar o programa?", "Really Closing?", JOptionPane.YES_NO_OPTION,
 	 JOptionPane.QUESTION_MESSAGE) == JOptionPane.YES_OPTION){
 	    	            System.exit(0);
 	    	        }
@@ -147,6 +165,81 @@ public class Server implements ActionListener{
 	}
 
 	  public void actionPerformed(ActionEvent e) {
+		  
+		  if(e.getSource()== abrir){
+			  w = aimg.getWidth();
+	 	         h = aimg.getHeight();
+  	        BufferedImage dimg = new BufferedImage(w, h, aimg.getType());  
+
+			  Container parent = l.getParent();
+			  
+			  String extension = "";
+	      JFileChooser fileChooser = new JFileChooser();
+	      fileChooser.setCurrentDirectory(new File(System.getProperty("user.home")));
+	      FileNameExtensionFilter filter = new FileNameExtensionFilter("Imagens","jpg","bmp","jpeg","gif");	      
+	      fileChooser.setFileFilter(filter);
+	      int result = fileChooser.showOpenDialog(f);
+	      if (result == JFileChooser.APPROVE_OPTION) {
+	          File selectedFile = fileChooser.getSelectedFile();
+	          a = selectedFile.getAbsolutePath();
+	          System.out.println("Selected file: " + a);
+	          try {
+				dimg = ImageIO.read(selectedFile);
+				w = dimg.getWidth();
+	 	         h = dimg.getHeight();
+				parent.remove(l);
+	   	         parent.validate();
+	   	         parent.repaint();
+			
+	   	         l = new JLabel(); l.setSize(w, h);aimg=dimg;img=dimg;
+	   	         l.setIcon(new ImageIcon(aimg));
+	   		     f.add(l);
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}  
+	       
+	        
+	      }
+	      }
+		  if(e.getSource()==net){
+			  Desktop d=Desktop.getDesktop();
+
+			  // Browse a URL, say google.com
+			  try {
+				d.browse(new URI("file:///C:/Users/Shelly/Desktop/tumblr_n9l1pguJm41qhsmqdo1_500.gif"));
+				//file:///C:/Users/Shelly/Desktop/tumblr_n9l1pguJm41qhsmqdo1_500.gif
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			} catch (URISyntaxException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+		  }
+		  
+		  if(e.getSource()==salvar){
+			  
+		      File saveFile = new File("savedimage."+"jpg");
+			  JFileChooser save = new JFileChooser(); // abre o diálogo para escolher arquivo
+				save.setSelectedFile(saveFile);
+			  int option = save.showSaveDialog(f);
+	            
+				if (option == JFileChooser.APPROVE_OPTION) {
+			          saveFile = save.getSelectedFile();
+
+					try {
+
+					    ImageIO.write(aimg, "jpg", saveFile);														
+	                    
+	                    
+					} catch (Exception ex) { // gera mensagens para exceções
+
+						System.out.println(ex.getMessage());
+
+					}
+				}
+		  }
 		  if (e.getSource() == inverter) { 
 			  w = aimg.getWidth();
 	 	         h = aimg.getHeight();
@@ -160,6 +253,7 @@ public class Server implements ActionListener{
 	    	                int b = 255 - (int) (rgb&0x000000FF);
 	    	                Color color = new Color(r, g, b);
 	    	                dimg.setRGB(i, j, color.getRGB());
+	    	                
 	    	            }
 	    	        }
 	    	        Container parent = l.getParent();
@@ -240,12 +334,13 @@ public class Server implements ActionListener{
 		               Arrays.sort(B);
 		               dimg.setRGB(i,j,new Color(R[4],B[4],G[4]).getRGB());
 		}
-			  aimg = dimg;
+			  w = dimg.getWidth();
+	  	         h = dimg.getHeight();
 	        Container parent = l.getParent();
 	         parent.remove(l);
 	         parent.validate();
 	         parent.repaint();
-	         l = new JLabel(); l.setSize(w, h);
+	         l = new JLabel(); l.setSize(w, h); aimg = dimg;
 	        l.setIcon(new ImageIcon(aimg));
 		      f.add(l);
 	    }  
@@ -327,12 +422,12 @@ public class Server implements ActionListener{
     	   
     	   if(e.getSource()== girar) { 
     	      
-                int w = img.getWidth();  
-                int h = img.getHeight();  
-                BufferedImage dimg = new BufferedImage(w, h, img.getType());  
+                int w = aimg.getWidth();  
+                int h = aimg.getHeight();  
+                BufferedImage dimg = new BufferedImage(w, h, aimg.getType());  
                 Graphics2D g = dimg.createGraphics();  
                 g.rotate(Math.toRadians(45), w/2, h/2);  
-                g.drawImage(img, null, 0, 0);  
+                g.drawImage(aimg, null, 0, 0);  
                 Container parent = l.getParent();
      	         parent.remove(l);
      	         parent.validate();
@@ -341,9 +436,18 @@ public class Server implements ActionListener{
      	         aimg = dimg;
      	         l.setIcon(new ImageIcon(aimg));
      		     f.add(l);
-	            
-                
-            } 
+    	   }
+     		    if(e.getSource()== desfazer) { 
+       		     Container parent = l.getParent();
+          	         parent.remove(l);
+          	         parent.validate();
+          	         parent.repaint();
+          	         l = new JLabel(); l.setSize(w, h);
+          	         aimg = img;
+          	         l.setIcon(new ImageIcon(aimg));
+          		     f.add(l);
+    	        }  
+            
     	   if(e.getSource()== comparar) { 
     	   Timer timer = new Timer(2000, new ActionListener() {
     		  boolean  chromeShown = true;
